@@ -1,0 +1,4 @@
+﻿out
+.vs
+hello-spotify/.env
+hello-spotify/spotify_auth.json
