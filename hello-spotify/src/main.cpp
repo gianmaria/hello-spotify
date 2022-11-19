@@ -52,7 +52,7 @@ int random_int(int min, int max)
 
 string random_string(uint8_t len)
 {
-    auto alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"; // _.-~;
+    auto alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.-~";
     auto max = strlen(alphabet);
 
     string res;
