@@ -69,77 +69,6 @@ string random_string(uint8_t len)
     return res;
 }
 
-bytes sha256_raw(cstr_ref input)
-{
-    bytes hash(picosha2::k_digest_size);
-    picosha2::hash256(input, hash);
-    return hash;
-}
-
-str sha256_str(cstr_ref input)
-{
-    return picosha2::hash256_hex_string(input);
-}
-
-string url_encode(cstr_ref url)
-{
-    // https://en.wikipedia.org/wiki/Percent-encoding#Reserved_characters
-    std::unordered_map<char, string> map
-    {
-        {' ', "%20"},
-        {'!', "%21"},
-        {'#', "%23"},
-        {'$', "%24"},
-        {'%', "%25"},
-        {'&', "%26"},
-        {'\'', "%27"},
-        {'(', "%28"},
-        {')', "%29"},
-        {'*', "%2A"},
-        {'+', "%2B"},
-        {',', "%2C"},
-        {'/', "%2F"},
-        {':', "%3A"},
-        {';', "%3B"},
-        {'=', "%3D"},
-        {'?', "%3F"},
-        {'@', "%40"},
-        {'[', "%5B"},
-        {']', "%5D"}
-    };
-
-    string encoded;
-    encoded.reserve(url.size() * 2);
-
-    for (auto c : url)
-    {
-        if (auto it = map.find(c); it != map.end())
-        {
-            encoded.append((*it).second);
-        }
-        else
-        {
-            encoded.append(1, c);
-        }
-    }
-
-    return encoded;
-}
-
-string base64_encode(cstr_ref input)
-{
-    return cppcodec::base64_rfc4648::encode<string>(input);
-}
-
-string base64_url_encode_unpadded(const bytes& input)
-{
-    return cppcodec::base64_url_unpadded::encode<string>(input);
-}
-
-string base64_url_encode(const bytes& input)
-{
-    return cppcodec::base64_url_unpadded::encode<string>(input);
-}
 
 
 class Spotify
@@ -375,6 +304,79 @@ public:
 
             return (result.value().status == 401);
         }
+
+        static bytes sha256_raw(cstr_ref input)
+        {
+            bytes hash(picosha2::k_digest_size);
+            picosha2::hash256(input, hash);
+            return hash;
+        }
+
+        static str sha256_str(cstr_ref input)
+        {
+            return picosha2::hash256_hex_string(input);
+        }
+
+        static string url_encode(cstr_ref url)
+        {
+            // https://en.wikipedia.org/wiki/Percent-encoding#Reserved_characters
+            std::unordered_map<char, string> map
+            {
+                {' ', "%20"},
+                {'!', "%21"},
+                {'#', "%23"},
+                {'$', "%24"},
+                {'%', "%25"},
+                {'&', "%26"},
+                {'\'', "%27"},
+                {'(', "%28"},
+                {')', "%29"},
+                {'*', "%2A"},
+                {'+', "%2B"},
+                {',', "%2C"},
+                {'/', "%2F"},
+                {':', "%3A"},
+                {';', "%3B"},
+                {'=', "%3D"},
+                {'?', "%3F"},
+                {'@', "%40"},
+                {'[', "%5B"},
+                {']', "%5D"}
+            };
+
+            string encoded;
+            encoded.reserve(url.size() * 2);
+
+            for (auto c : url)
+            {
+                if (auto it = map.find(c); it != map.end())
+                {
+                    encoded.append((*it).second);
+                }
+                else
+                {
+                    encoded.append(1, c);
+                }
+            }
+
+            return encoded;
+        }
+
+        static string base64_encode(cstr_ref input)
+        {
+            return cppcodec::base64_rfc4648::encode<string>(input);
+        }
+
+        static string base64_url_encode_unpadded(const bytes& input)
+        {
+            return cppcodec::base64_url_unpadded::encode<string>(input);
+        }
+
+        static string base64_url_encode(const bytes& input)
+        {
+            return cppcodec::base64_url_unpadded::encode<string>(input);
+        }
+
 
     private:
         string client_id;
