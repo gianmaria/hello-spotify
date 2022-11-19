@@ -56,7 +56,7 @@ string random_string(uint8_t len)
     auto max = strlen(alphabet);
 
     string res;
-    res.reserve(len + 1);
+    res.reserve(len);
 
     for (uint8_t i = 0;
          i < len;
