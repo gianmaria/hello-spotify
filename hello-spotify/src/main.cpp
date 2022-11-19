@@ -60,7 +60,7 @@ int main()
                     env("CLIENT_ID"),
                     spotify_auth["refresh_token"].get_ref<cstr_ref>());
 
-                spotify_auth["access_token"] = new_access_token["access_token"];
+                spotify_auth = new_access_token;
 
                 std::ofstream(spotify_auth_filename)
                     << spotify_auth.dump(3) << std::endl;
@@ -87,14 +87,35 @@ int main()
 
         auto spotify = Spotify::API(spotify_auth["access_token"].get_ref<string&>());
 
-        auto playlists = spotify.get_current_user_playlists();
+        auto me = spotify.get_current_user_profile();
 
-        for (const auto& item : playlists["items"])
+        cout << me["display_name"] << " "
+            << me["email"] << " "
+            << me["id"] << " "
+            << me["product"] << " "
+            << endl;
+
+        //cout << playlists.dump(3) << endl;
+        size_t offset = 0;
+        size_t count = 1;
+        while (true)
         {
-            cout << item["name"]
-                << " by " << item["owner"]["display_name"]
-                << " - " << item["uri"]
-                << endl;
+            auto playlists = spotify.get_current_user_playlists(10, offset);
+
+            for (const auto& item : playlists["items"])
+            {
+                cout
+                    << "[" << count++ << "] "
+                    << item["name"]
+                    << " by " << item["owner"]["display_name"]
+                    << " - " << item["uri"]
+                    << endl;
+            }
+
+            if (playlists["next"].is_null())
+                break;
+
+            offset += 10;
         }
 
         //auto play = spotify.get_currently_playing_track();
