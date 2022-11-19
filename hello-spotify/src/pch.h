@@ -28,8 +28,6 @@ using bytes = std::vector<uint8_t>;
 using nlohmann::literals::operator""_json_pointer;
 using njson = nlohmann::json;
 
-
-
 #define CPPHTTPLIB_OPENSSL_SUPPORT
 #define CPPHTTPLIB_ZLIB_SUPPORT
 #define CPPHTTPLIB_BROTLI_SUPPORT
