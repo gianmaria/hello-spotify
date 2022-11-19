@@ -359,9 +359,11 @@ public:
         return get("/v1/me");
     }
 
-    njson get_current_user_playlists()
+    njson get_current_user_playlists(size_t limit, size_t offset)
     {
-        return get("/v1/me/playlists?limit=50");
+        auto path = std::format("/v1/me/playlists?limit={}&offset={}",
+                                limit, offset);
+        return get(path);
     }
 
     njson get_currently_playing_track()
