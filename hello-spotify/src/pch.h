@@ -21,6 +21,8 @@ using cstr_ref = const string&;
 using str_cref = const string&;
 using str = string;
 
+using bytes = std::vector<uint8_t>;
+
 #define JSON_USE_IMPLICIT_CONVERSIONS 0
 #include <nlohmann/json.hpp>
 using nlohmann::literals::operator""_json_pointer;
@@ -36,3 +38,4 @@ using njson = nlohmann::json;
 #include <picosha2.h>
 
 #include <cppcodec/base64_rfc4648.hpp>
+#include <cppcodec/base64_default_url_unpadded.hpp>

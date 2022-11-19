@@ -69,7 +69,14 @@ string random_string(uint8_t len)
     return res;
 }
 
-string sha256(cstr_ref input)
+bytes sha256_raw(cstr_ref input)
+{
+    bytes hash(picosha2::k_digest_size);
+    picosha2::hash256(input, hash);
+    return hash;
+}
+
+str sha256_str(cstr_ref input)
 {
     return picosha2::hash256_hex_string(input);
 }
@@ -121,8 +128,17 @@ string url_encode(cstr_ref url)
 
 string base64_encode(cstr_ref input)
 {
-    using base64 = cppcodec::base64_rfc4648;
-    return base64::encode<string>(input);
+    return cppcodec::base64_rfc4648::encode<string>(input);
+}
+
+string base64_url_encode_unpadded(const bytes& input)
+{
+    return cppcodec::base64_url_unpadded::encode<string>(input);
+}
+
+string base64_url_encode(const bytes& input)
+{
+    return cppcodec::base64_url_unpadded::encode<string>(input);
 }
 
 
@@ -143,6 +159,7 @@ public:
         string generate_url_for_user_authorization()
         {
             state = random_string(16);
+            code_verifier = random_string(43);
 
             auto scope = "ugc-image-upload user-read-playback-state user-modify-playback-state user-read-currently-playing app-remote-control streaming playlist-read-private playlist-read-collaborative playlist-modify-private playlist-modify-public user-follow-modify user-follow-read user-read-playback-position user-top-read user-read-recently-played user-library-modify user-library-read user-read-email user-read-private";
 
@@ -150,10 +167,14 @@ public:
 
             ss << "client_id=" << client_id
                 << "&response_type=" << "code"
-                << "&redirect_uri=" << Spotify::Auth::get_redirect_uri()
+                << "&redirect_uri=" << url_encode(Spotify::Auth::get_redirect_uri())
                 << "&state=" << state
                 << "&scope=" << url_encode(scope)
-                << "&show_dialog=" << "false";
+                // PKCE stuff
+                << "&code_challenge_method=" << "S256"
+                << "&code_challenge=" << base64_url_encode_unpadded(sha256_raw(code_verifier))
+                << "&show_dialog=" << "false"
+                ;
 
             auto url = "https://accounts.spotify.com/authorize?" + ss.str();
 
@@ -242,6 +263,9 @@ public:
                 {"grant_type", "authorization_code"},
                 {"code", auth_code},
                 {"redirect_uri", Spotify::Auth::get_redirect_uri()},
+
+                {"client_id", client_id},
+                {"code_verifier", code_verifier},
             };
 
             auto r = httplib::SSLClient(host);
@@ -250,8 +274,11 @@ public:
 
             if (not res)
             {
-                cout << "[ERROR] POST request " << host << path
-                    << " failed: " << httplib::to_string(res.error()) << endl;
+                cout
+                    << "[ERROR]" << endl
+                    << "  POST request " << host << path << " failed" << endl
+                    << "  '" << httplib::to_string(res.error()) << "'" << endl
+                    ;
                 return {};
             }
 
@@ -259,8 +286,12 @@ public:
 
             if (resp.status != 200)
             {
-                cout << "[ERROR] POST request " << host << path << " status: " << resp.status
-                    << " returned error: " << endl << resp.body << endl;
+                cout
+                    << "[ERROR]" << endl
+                    << "  POST request: '" << host << path << "'" << endl
+                    << "  " << resp.status << " " << resp.reason << endl
+                    << "  '" << resp.body << "'" << endl
+                    ;
                 return {};
             }
 
@@ -280,26 +311,31 @@ public:
         }
 
         static njson refresh_access_token(cstr_ref client_id,
-                                          cstr_ref client_secret,
                                           cstr_ref refresh_token)
         {
             httplib::Headers headers
             {
-                {"Authorization", "Basic " + base64_encode(client_id + ":" + client_secret)},
             };
 
             httplib::Params params
             {
                 {"grant_type", "refresh_token"},
                 {"refresh_token", refresh_token},
+                // for PKCE
+                {"client_id", client_id},
             };
 
             auto r = httplib::SSLClient(Spotify::Auth::host);
-            auto result = r.Post("/api/token", headers, params);
+            auto path = "/api/token";
+            auto result = r.Post(path, headers, params);
 
             if (not result)
             {
-                cout << httplib::to_string(result.error()) << endl;
+                cout
+                    << "[ERROR]" << endl
+                    << "  POST request " << host << path << endl
+                    << "  failed with reason: " << httplib::to_string(result.error()) << endl
+                    ;
                 return {};
             }
 
@@ -307,9 +343,12 @@ public:
 
             if (resp.status != 200)
             {
-                cout << "status: " << resp.status
-                    << " " << resp.body
-                    << endl;
+                cout
+                    << "[ERROR]" << endl
+                    << "  POST request: '" << host << path << "'" << endl
+                    << "  " << resp.status << " " << resp.reason << endl
+                    << "  '" << resp.body << "'" << endl
+                    ;
                 return {};
             }
 
@@ -467,7 +506,6 @@ int main()
 {
     try
     {
-        
         njson spotify_auth;
         auto spotify_auth_filename = "spotify_auth.json";
 
@@ -478,7 +516,7 @@ int main()
             if (Spotify::Auth::is_token_expired(spotify_auth["access_token"].get_ref<string&>()))
             {
                 auto new_access_token = Spotify::Auth::refresh_access_token(
-                    env("CLIENT_ID"), env("CLIENT_SECRET"),
+                    env("CLIENT_ID"),
                     spotify_auth["refresh_token"].get_ref<cstr_ref>());
 
                 spotify_auth["access_token"] = new_access_token["access_token"];
@@ -512,9 +550,9 @@ int main()
 
         for (const auto& item : playlists["items"])
         {
-            cout << item["name"] 
-                << " by " << item["owner"]["display_name"] 
-                << " - " << item["uri"] 
+            cout << item["name"]
+                << " by " << item["owner"]["display_name"]
+                << " - " << item["uri"]
                 << endl;
         }
 
