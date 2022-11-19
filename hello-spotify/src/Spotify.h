@@ -5,8 +5,6 @@
 namespace Spotify
 {
 
-static constexpr auto host = "accounts.spotify.com";
-
 class Auth
 {
 public:
@@ -215,7 +213,6 @@ public:
 
     static bool is_token_expired(cstr_ref access_token)
     {
-
         auto r = httplib::SSLClient(host);
 
         httplib::Headers headers
@@ -342,6 +339,8 @@ private:
     string state;
     string code_verifier;
 
+    static constexpr auto host = "accounts.spotify.com";
+
     static constexpr auto redirect_uri_host = "localhost";
     static constexpr auto redirect_uri_port = 6969;
     static constexpr auto redirect_uri_path = "/spotify-callback";
@@ -382,7 +381,7 @@ private:
 
     njson get(cstr_ref path)
     {
-        static auto r = httplib::SSLClient(Spotify::host);
+        static auto r = httplib::SSLClient(host);
         static httplib::Headers headers
         {
             {"Accept", "application/json"},
@@ -420,7 +419,7 @@ private:
 
     njson post(cstr_ref path)
     {
-        static auto r = httplib::SSLClient(Spotify::host);
+        static auto r = httplib::SSLClient(host);
         static httplib::Headers headers
         {
             {"Accept", "application/json"},
