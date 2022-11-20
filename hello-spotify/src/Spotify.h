@@ -216,30 +216,24 @@ public:
         };
 
         auto r = httplib::SSLClient(host);
+
         auto path = "/api/token";
         auto result = r.Post(path, headers, params);
 
         if (not result)
         {
-            cout
-                << "[ERROR]" << endl
-                << "  POST request " << host << path << endl
-                << "  failed with reason: " << httplib::to_string(result.error()) << endl
-                ;
-            return {};
+            auto msg = std::format("Cannot POST to {}{} - {}",
+                                   host, path, httplib::to_string(res.error()));
+            throw std::runtime_error(msg);
         }
 
         auto resp = result.value();
 
         if (resp.status != 200)
         {
-            cout
-                << "[ERROR]" << endl
-                << "  POST request: '" << host << path << "'" << endl
-                << "  " << resp.status << " " << resp.reason << endl
-                << "  '" << resp.body << "'" << endl
-                ;
-            return {};
+            auto msg = std::format("POST request '{}{}' failed, status '{}' reson '{}', body: {}",
+                                   host, path, resp.status, resp.reason, resp.body);
+            throw std::runtime_error(msg);
         }
 
         return njson::parse(resp.body);
