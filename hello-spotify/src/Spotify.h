@@ -75,7 +75,7 @@ public:
             << "&code_challenge=" << base64_url_encode_unpadded(sha256_raw(code_verifier))
             ;
 
-        return std::format("https://{}/authorize?{}", 
+        return std::format("https://{}/authorize?{}",
                            host, query_parameters.str());
     }
 
@@ -419,29 +419,45 @@ class API
 {
 public:
 
+    struct Result
+    {
+        int status_code;
+        str reason;
+
+        njson body;
+    };
+
     API(cstr_ref access_token) :
         access_token(access_token) {}
 
-    njson get_current_user_profile()
+    Result get_current_user_profile()
     {
-        return get("/v1/me");
+        return GET("/v1/me");
     }
 
-    njson get_current_user_playlists(size_t limit, size_t offset)
+    Result get_current_user_playlists(size_t limit, size_t offset)
     {
         auto path = std::format("/v1/me/playlists?limit={}&offset={}",
                                 limit, offset);
-        return get(path);
+        return GET(path);
     }
 
-    njson get_currently_playing_track()
+    Result get_currently_playing_track()
     {
-        return get("/v1/me/player/currently-playing");
+        return GET("/v1/me/player/currently-playing");
     }
 
-    njson skip_to_next()
+    Result skip_to_next(str_cref device_id = "")
     {
-        return post("/v1/me/player/next");
+        str path = "/v1/me/player/next";
+
+        if (device_id != "")
+        {
+            path = std::format("/v1/me/player/next?device_id={}",
+                               device_id);
+        }
+
+        return POST(path);
     }
 
     static bool is_token_expired(cstr_ref access_token)
@@ -491,9 +507,10 @@ private:
 
     static auto constexpr host = "api.spotify.com";
 
-    njson get(cstr_ref path)
+    Result GET(cstr_ref path)
     {
         static auto r = httplib::SSLClient(host);
+
         static httplib::Headers headers
         {
             {"Accept", "application/json"},
@@ -505,31 +522,21 @@ private:
 
         if (not result)
         {
-            njson json;
-            json["error"] = {{"message", httplib::to_string(result.error())}};
-            json["error"].push_back({{"status", ""}});
-            return json;
+            auto msg = std::format("GET {}{} failed: {}",
+                                   host, path, httplib::to_string(result.error()));
+            throw std::runtime_error(msg);
         }
 
         auto resp = result.value();
 
-        switch (resp.status)
-        {
-            case 204:
-            {
-                njson json;
-                json["error"] = {
-                    {"message", resp.reason},
-                    {"status", resp.status}
-                };
-                return json;
-            } break;
-
-            default: return njson::parse(resp.body);
-        }
+        return Result{
+            .status_code = resp.status,
+            .reason = resp.reason,
+            .body = (resp.body != "") ? njson::parse(resp.body) : njson::parse("{}")
+        };
     }
 
-    njson post(cstr_ref path)
+    Result POST(cstr_ref path)
     {
         static auto r = httplib::SSLClient(host);
         static httplib::Headers headers
@@ -548,31 +555,18 @@ private:
 
         if (not result)
         {
-            njson json{
-                "error", {
-                    {"message", httplib::to_string(result.error())},
-                {"status", "" }
-            }
-            };
-            return json;
+            auto msg = std::format("POST {}{} failed: {}",
+                                   host, path, httplib::to_string(result.error()));
+            throw std::runtime_error(msg);
         }
 
         auto resp = result.value();
 
-        switch (resp.status)
-        {
-            case 204:
-            {
-                njson json;
-                json["error"] = {
-                    {"message", resp.reason},
-                    {"status", resp.status}
-                };
-                return json;
-            } break;
-
-            default: return njson::parse(resp.body);
-        }
+        return Result{
+            .status_code = resp.status,
+            .reason = resp.reason,
+            .body = (resp.body != "") ? njson::parse(resp.body) : njson::parse("{}")
+        };
     }
 
 };
