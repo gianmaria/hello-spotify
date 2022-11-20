@@ -38,11 +38,21 @@ using njson = nlohmann::json;
 namespace Spotify
 {
 
+struct Auth_Settings
+{
+    str client_id;
+    str client_secret;
+
+    str redirect_uri_host;
+    uint16_t redirect_uri_port;
+    str redirect_uri_path;
+};
+
 class Auth
 {
 public:
-    Auth(string client_id, string client_secret) :
-        client_id(client_id), client_secret(client_secret)
+    Auth(const Auth_Settings& auth_settings)
+        : auth_settings(auth_settings)
     { }
 
     string generate_url_for_user_authorization()
@@ -54,7 +64,7 @@ public:
 
         std::stringstream ss;
 
-        ss << "client_id=" << client_id
+        ss << "client_id=" << auth_settings.client_id
             << "&response_type=" << "code"
             << "&redirect_uri=" << url_encode(get_redirect_uri())
             << "&state=" << state
@@ -76,13 +86,12 @@ public:
         using httplib::Response;
 
         string auth_code;
-        auto& sent_state = state; // to avoid to capture 'this' in lambda
 
         auto srv = httplib::Server();
 
         auto handle_callback =
-            [&auth_code, &sent_state](const Request& req,
-                                      Response& resp)
+            [&auth_code, this]
+        (const Request& req, Response& resp)
         {
             if (req.has_param("code") and
                 req.has_param("state"))
@@ -92,18 +101,18 @@ public:
                 string resp_state = req.get_param_value("state");
                 auth_code = req.get_param_value("code");
 
-                if (not (resp_state == sent_state))
+                if (not (resp_state == state))
                 {
                     auto html = std::format(html_state_mismatch,
-                                            redirect_uri_host,
-                                            redirect_uri_port);
+                                            auth_settings.redirect_uri_host,
+                                            auth_settings.redirect_uri_port);
                     resp.set_content(html, "text/html");
                 }
                 else
                 {
                     auto html = std::format(html_all_good,
-                                            redirect_uri_host,
-                                            redirect_uri_port);
+                                            auth_settings.redirect_uri_host,
+                                            auth_settings.redirect_uri_port);
 
                     resp.set_content(html, "text/html");
                 }
@@ -114,8 +123,8 @@ public:
                 // the user doesn't accepted your request or an error has occurreded
                 auto html = std::format(html_user_approval_denied_or_error,
                                         req.get_param_value("error"),
-                                        redirect_uri_host,
-                                        redirect_uri_port);
+                                        auth_settings.redirect_uri_host,
+                                        auth_settings.redirect_uri_port);
 
                 resp.set_content(html, "text/html");
             }
@@ -123,27 +132,27 @@ public:
             {
                 // something bad happened
                 auto html = std::format(html_unknown_error,
-                                        redirect_uri_host,
-                                        redirect_uri_port);
+                                        auth_settings.redirect_uri_host,
+                                        auth_settings.redirect_uri_port);
                 resp.set_content(html, "text/html");
             }
         };
 
-        auto handle_stop = [&srv](const Request&, 
+        auto handle_stop = [&srv](const Request&,
                                   Response& resp)
         {
             resp.set_content(html_stop, "text/html");
             srv.stop();
         };
 
-        srv.Get(redirect_uri_path, handle_callback);
+        srv.Get(auth_settings.redirect_uri_path, handle_callback);
         srv.Get("/stop", handle_stop);
 
-        if (not srv.listen(redirect_uri_host, redirect_uri_port))
+        if (not srv.listen(auth_settings.redirect_uri_host, auth_settings.redirect_uri_port))
         {
             throw std::runtime_error(
                 std::format("Cannot listen on {}:{}",
-                redirect_uri_host, redirect_uri_port)
+                auth_settings.redirect_uri_host, auth_settings.redirect_uri_port)
             );
         }
 
@@ -154,7 +163,7 @@ public:
     {
         httplib::Headers headers
         {
-            {"Authorization", "Basic " + base64_encode(client_id + ":" + client_secret)},
+            {"Authorization", "Basic " + base64_encode(auth_settings.client_id + ":" + auth_settings.client_secret)},
         };
 
         httplib::Params params
@@ -163,7 +172,7 @@ public:
             {"code", auth_code},
             {"redirect_uri", get_redirect_uri()},
 
-            {"client_id", client_id},
+            {"client_id", auth_settings.client_id},
             {"code_verifier", code_verifier},
         };
 
@@ -195,18 +204,6 @@ public:
         }
 
         return njson::parse(resp.body);
-    }
-
-    static string get_redirect_uri()
-    {
-        std::stringstream ss;
-        ss << "http://"
-            << redirect_uri_host
-            << ":"
-            << redirect_uri_port
-            << redirect_uri_path;
-
-        return ss.str();
     }
 
     static njson refresh_access_token(cstr_ref client_id,
@@ -253,6 +250,7 @@ public:
 
         return njson::parse(resp.body);
     }
+
 
     static bool is_token_expired(cstr_ref access_token)
     {
@@ -376,17 +374,12 @@ public:
 
 
 private:
-    string client_id;
-    string client_secret;
+    Auth_Settings auth_settings;
 
     string state;
     string code_verifier;
 
     static constexpr auto host = "accounts.spotify.com";
-
-    static constexpr auto redirect_uri_host = "localhost";
-    static constexpr auto redirect_uri_port = 6969;
-    static constexpr auto redirect_uri_path = "/spotify-callback";
 
     static constexpr auto html_state_mismatch =
         R"(
@@ -442,6 +435,17 @@ private:
 </html>
 )";
 
+    string get_redirect_uri()
+    {
+        std::stringstream ss;
+        ss << "http://"
+            << auth_settings.redirect_uri_host
+            << ":"
+            << auth_settings.redirect_uri_port
+            << auth_settings.redirect_uri_path;
+
+        return ss.str();
+    }
 };
 
 
