@@ -1,5 +1,9 @@
 #pragma once
 
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <shellapi.h>
+
 #include <algorithm>
 #include <filesystem>
 #include <format>
@@ -10,6 +14,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <system_error>
 
 using std::cout;
 using std::endl;

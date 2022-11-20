@@ -70,14 +70,55 @@ int main()
         {
             auto auth = Spotify::Auth(env("CLIENT_ID"), env("CLIENT_SECRET"));
 
-            cout << auth.generate_url_for_user_authorization() << endl;
+            auto chrome_params = std::format("--new-window --profile-directory=\"Default\" {}",
+                                             auth.generate_url_for_user_authorization());
+
+            auto res = ShellExecuteA(NULL, "open",
+                                     "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+                                     chrome_params.c_str(), NULL, 0);
+
+            if (reinterpret_cast<INT_PTR>(res) < 32)
+            {
+                str error;
+
+                switch (reinterpret_cast<INT_PTR>(res))
+                {
+                    case 0: error = "The operating system is out of memory or resources"; break;
+                    case ERROR_FILE_NOT_FOUND: error = "ERROR_FILE_NOT_FOUND"; break;
+                    case ERROR_PATH_NOT_FOUND: error = "ERROR_PATH_NOT_FOUND"; break;
+                    case ERROR_BAD_FORMAT: error = "ERROR_BAD_FORMAT"; break;
+                    case SE_ERR_ACCESSDENIED: error = "SE_ERR_ACCESSDENIED"; break;
+                    case SE_ERR_ASSOCINCOMPLETE: error = "SE_ERR_ASSOCINCOMPLETE"; break;
+                    case SE_ERR_DDEBUSY: error = "SE_ERR_DDEBUSY"; break;
+                    case SE_ERR_DDEFAIL: error = "SE_ERR_DDEFAIL"; break;
+                    case SE_ERR_DDETIMEOUT: error = "SE_ERR_DDETIMEOUT"; break;
+                    case SE_ERR_DLLNOTFOUND: error = "SE_ERR_DLLNOTFOUND"; break;
+                    case SE_ERR_NOASSOC: error = "SE_ERR_NOASSOC"; break;
+                    case SE_ERR_OOM: error = "SE_ERR_OOM"; break;
+                    case SE_ERR_SHARE: error = "SE_ERR_SHARE"; break;
+                    default: error = "???"; break;
+                }
+
+                cout << "[ERROR] Cannot start Chrome: " << error
+                    << " (" << std::system_category().message(GetLastError()) << ")"
+                    << endl;
+
+                return 1;
+            }
 
             auto auth_code = auth.spawn_server_for_callback();
+
+            if (auth_code == "")
+            {
+                cout << "[ERROR] Cannot obtain auth_code" << endl;
+                return 1;
+            }
 
             spotify_auth = auth.request_access_token(auth_code);
 
             if (spotify_auth.is_null())
             {
+                cout << "[ERROR] Cannot get barer token" << endl;
                 return 1;
             }
 
