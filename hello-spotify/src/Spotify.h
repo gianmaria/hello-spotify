@@ -1,6 +1,31 @@
 #pragma once
 
-#include "pch.h"
+#include <format>
+#include <fstream>
+#include <iostream>
+#include <random>
+#include <string_view>
+#include <string>
+#include <vector>
+
+using std::string;
+using std::string_view;
+
+using cstr_ref = const string&;
+using str_cref = const string&;
+using str = string;
+
+using bytes = std::vector<uint8_t>;
+
+#define JSON_USE_IMPLICIT_CONVERSIONS 0
+#include <nlohmann/json.hpp>
+using nlohmann::literals::operator""_json_pointer;
+using njson = nlohmann::json;
+
+#define CPPHTTPLIB_OPENSSL_SUPPORT
+#define CPPHTTPLIB_ZLIB_SUPPORT
+#define CPPHTTPLIB_BROTLI_SUPPORT
+#include <httplib.h>
 
 namespace Spotify
 {
