@@ -239,26 +239,6 @@ public:
         return njson::parse(resp.body);
     }
 
-    static bool is_token_expired(cstr_ref access_token)
-    {
-        auto r = httplib::SSLClient(host);
-
-        httplib::Headers headers
-        {
-            {"Content-Type", "application/json"},
-            {"Authorization", "Bearer " + access_token},
-        };
-
-        auto result = r.Get("/v1/me", headers);
-
-        if (not result)
-        {
-            return true;
-        }
-
-        return (result.value().status == 401);
-    }
-
 private:
     Auth_Settings auth_settings;
 
@@ -462,6 +442,48 @@ public:
     njson skip_to_next()
     {
         return post("/v1/me/player/next");
+    }
+
+    static bool is_token_expired(cstr_ref access_token)
+    {
+        auto r = httplib::SSLClient(host);
+
+        httplib::Headers headers
+        {
+            {"Content-Type", "application/json"},
+            {"Authorization", "Bearer " + access_token},
+        };
+
+        auto path = "/v1/me";
+        auto result = r.Get(path, headers);
+
+        if (not result)
+        {
+            auto msg = std::format("Cannot GET to {}{} - {}",
+                                   host, path, httplib::to_string(result.error()));
+            throw std::runtime_error(msg);
+        }
+
+        switch (result.value().status)
+        {
+            case 200:
+            {
+                return false;
+            } break;
+
+            case 401:
+            {
+                return true;
+            } break;
+
+            default:
+            {
+                auto msg = std::format("Unknown status code for call to is_token_expired(): {}",
+                                       result.value().status);
+                throw std::runtime_error(msg);
+            } break;
+        }
+
     }
 
 private:
