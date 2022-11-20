@@ -44,9 +44,9 @@ string env(string_view name)
 }
 
 
-void general_test(Spotify::API& api)
+void general_test(const Spotify::API& api)
 {
-    auto me = api.get_current_user_profile();
+    auto me = api.user_profile_get_current_user_profile();
 
     cout << "User: " << me.body["display_name"].get_ref<str_cref>()
         << " mail: " << me.body["email"].get_ref<str_cref>()
@@ -58,7 +58,7 @@ void general_test(Spotify::API& api)
     size_t offset = 0;
     size_t limit = 50;
 
-    auto playlists = api.get_current_user_playlists(limit, offset);
+    auto playlists = api.playlists_get_current_user_playlists(limit, offset);
 
     cout << "Found " << playlists.body["total"].get<size_t>() << " playlists" << endl;
 
@@ -83,13 +83,17 @@ void general_test(Spotify::API& api)
         using namespace std::chrono_literals;
         std::this_thread::sleep_for(500ms);
 
-        playlists = api.get_current_user_playlists(limit, offset);
+        playlists = api.playlists_get_current_user_playlists(limit, offset);
     }
 }
 
-void playback_test(Spotify::API& api)
+void playback_test(const Spotify::API& api)
 {
-    auto res = api.skip_to_next();
+    auto state = api.player_get_playback_state();
+    cout << state.body.dump(3) << endl;
+
+    auto res = api.player_skip_to_next();
+    cout << res.body.dump(3) << endl;
 
     int stop = 0;
 }
@@ -105,7 +109,7 @@ int main()
         {
             spotify_auth = njson::parse(std::ifstream(spotify_auth_filename));
 
-            if (Spotify::API::is_token_expired(spotify_auth["access_token"].get_ref<string&>()))
+            if (Spotify::API(spotify_auth["access_token"].get_ref<string&>()).is_token_expired())
             {
                 auto new_access_token = Spotify::Auth::refresh_access_token(
                     env("CLIENT_ID"),
