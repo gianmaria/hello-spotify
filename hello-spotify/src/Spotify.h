@@ -430,24 +430,24 @@ public:
     API(cstr_ref access_token) :
         access_token(access_token) {}
 
-    Result get_current_user_profile()
+    Result user_profile_get_current_user_profile()
     {
         return GET("/v1/me");
     }
 
-    Result get_current_user_playlists(size_t limit, size_t offset)
+    Result playlists_get_current_user_playlists(size_t limit, size_t offset)
     {
         auto path = std::format("/v1/me/playlists?limit={}&offset={}",
                                 limit, offset);
         return GET(path);
     }
 
-    Result get_currently_playing_track()
+    Result player_get_currently_playing_track()
     {
         return GET("/v1/me/player/currently-playing");
     }
 
-    Result skip_to_next(str_cref device_id = "")
+    Result player_skip_to_next(str_cref device_id = "")
     {
         str path = "/v1/me/player/next";
 
