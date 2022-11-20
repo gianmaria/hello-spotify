@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 
+using std::cout;
+using std::endl;
 using std::string;
 using std::string_view;
 
@@ -26,6 +28,11 @@ using njson = nlohmann::json;
 #define CPPHTTPLIB_ZLIB_SUPPORT
 #define CPPHTTPLIB_BROTLI_SUPPORT
 #include <httplib.h>
+
+#include <picosha2.h>
+
+#include <cppcodec/base64_rfc4648.hpp>
+#include <cppcodec/base64_default_url_unpadded.hpp>
 
 namespace Spotify
 {
