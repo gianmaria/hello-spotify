@@ -179,16 +179,16 @@ public:
         auto r = httplib::SSLClient(host);
 
         auto path = "/api/token";
-        auto res = r.Post(path, headers, params);
+        auto result = r.Post(path, headers, params);
 
-        if (not res)
+        if (not result)
         {
             auto msg = std::format("Cannot POST to {}{} - {}",
-                                   host, path, httplib::to_string(res.error()));
+                                   host, path, httplib::to_string(result.error()));
             throw std::runtime_error(msg);
         }
 
-        auto resp = res.value();
+        auto resp = result.value();
 
         if (resp.status != 200)
         {
@@ -223,7 +223,7 @@ public:
         if (not result)
         {
             auto msg = std::format("Cannot POST to {}{} - {}",
-                                   host, path, httplib::to_string(res.error()));
+                                   host, path, httplib::to_string(result.error()));
             throw std::runtime_error(msg);
         }
 
