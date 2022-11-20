@@ -43,6 +43,8 @@ struct Auth_Settings
     str client_id;
     str client_secret;
 
+    str scope;
+
     str redirect_uri_host;
     uint16_t redirect_uri_port;
     str redirect_uri_path;
@@ -60,22 +62,21 @@ public:
         state = random_string(16);
         code_verifier = random_string(43);
 
-        auto scope = "ugc-image-upload user-read-playback-state user-modify-playback-state user-read-currently-playing app-remote-control streaming playlist-read-private playlist-read-collaborative playlist-modify-private playlist-modify-public user-follow-modify user-follow-read user-read-playback-position user-top-read user-read-recently-played user-library-modify user-library-read user-read-email user-read-private";
-
         std::stringstream query_parameters;
 
         query_parameters << "client_id=" << auth_settings.client_id
             << "&response_type=" << "code"
             << "&redirect_uri=" << url_encode(get_redirect_uri())
             << "&state=" << state
-            << "&scope=" << url_encode(scope)
+            << "&scope=" << url_encode(auth_settings.scope)
             << "&show_dialog=" << "false"
             // PKCE stuff
             << "&code_challenge_method=" << "S256"
             << "&code_challenge=" << base64_url_encode_unpadded(sha256_raw(code_verifier))
             ;
 
-        return "https://" + host + "/authorize?" + query_parameters.str();
+        return std::format("https://{}/authorize?{}", 
+                           host, query_parameters.str());
     }
 
     string spawn_server_for_callback()
