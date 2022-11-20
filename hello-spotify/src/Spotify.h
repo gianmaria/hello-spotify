@@ -62,22 +62,20 @@ public:
 
         auto scope = "ugc-image-upload user-read-playback-state user-modify-playback-state user-read-currently-playing app-remote-control streaming playlist-read-private playlist-read-collaborative playlist-modify-private playlist-modify-public user-follow-modify user-follow-read user-read-playback-position user-top-read user-read-recently-played user-library-modify user-library-read user-read-email user-read-private";
 
-        std::stringstream ss;
+        std::stringstream query_parameters;
 
-        ss << "client_id=" << auth_settings.client_id
+        query_parameters << "client_id=" << auth_settings.client_id
             << "&response_type=" << "code"
             << "&redirect_uri=" << url_encode(get_redirect_uri())
             << "&state=" << state
             << "&scope=" << url_encode(scope)
+            << "&show_dialog=" << "false"
             // PKCE stuff
             << "&code_challenge_method=" << "S256"
             << "&code_challenge=" << base64_url_encode_unpadded(sha256_raw(code_verifier))
-            << "&show_dialog=" << "false"
             ;
 
-        auto url = "https://accounts.spotify.com/authorize?" + ss.str();
-
-        return url;
+        return "https://" + host + "/authorize?" + query_parameters.str();
     }
 
     string spawn_server_for_callback()
