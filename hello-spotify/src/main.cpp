@@ -54,7 +54,7 @@ int main()
         {
             spotify_auth = njson::parse(std::ifstream(spotify_auth_filename));
 
-            if (Spotify::Auth::is_token_expired(spotify_auth["access_token"].get_ref<string&>()))
+            if (Spotify::API::is_token_expired(spotify_auth["access_token"].get_ref<string&>()))
             {
                 auto new_access_token = Spotify::Auth::refresh_access_token(
                     env("CLIENT_ID"),
@@ -142,19 +142,21 @@ int main()
 
         auto me = spotify.get_current_user_profile();
 
-        cout << me["display_name"] << " "
-            << me["email"] << " "
-            << me["id"] << " "
-            << me["product"] << " "
+        cout << "User " << me["display_name"].get_ref<str_cref>()
+            << " mail " << me["email"].get_ref<str_cref>()
+            << " id " << me["id"].get_ref<str_cref>()
+            << " product " << me["product"].get_ref<str_cref>()
             << endl;
 
         //cout << playlists.dump(3) << endl;
         size_t offset = 0;
         size_t count = 1;
+
+        size_t limit = 50;
+        auto playlists = spotify.get_current_user_playlists(limit, offset);
+        cout << "Found " << playlists["total"].get<size_t>() << " playlists" << endl;
         while (true)
         {
-            auto playlists = spotify.get_current_user_playlists(10, offset);
-
             for (const auto& item : playlists["items"])
             {
                 cout
@@ -168,7 +170,12 @@ int main()
             if (playlists["next"].is_null())
                 break;
 
-            offset += 10;
+            offset += limit;
+
+            using namespace std::chrono_literals;
+            std::this_thread::sleep_for(500ms);
+
+            playlists = spotify.get_current_user_playlists(limit, offset);
         }
 
         //auto play = spotify.get_currently_playing_track();
