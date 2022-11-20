@@ -7,6 +7,7 @@
 #include <string_view>
 #include <string>
 #include <vector>
+#include <stdexcept>
 
 using std::cout;
 using std::endl;
@@ -71,69 +72,79 @@ public:
 
     string spawn_server_for_callback()
     {
+        using httplib::Request;
+        using httplib::Response;
+
         string auth_code;
+        auto& sent_state = state; // to avoid to capture 'this' in lambda
 
         auto srv = httplib::Server();
 
-        srv.Get(redirect_uri_path, [&]
-        (const httplib::Request& req, httplib::Response& resp)
+        auto handle_callback =
+            [&auth_code, &sent_state](const Request& req,
+                                      Response& resp)
         {
-            string resp_state;
+            if (req.has_param("code") and
+                req.has_param("state"))
+            {
+                // the user accepted your request
 
-        if (req.has_param("code"))
+                string resp_state = req.get_param_value("state");
+                auth_code = req.get_param_value("code");
+
+                if (not (resp_state == sent_state))
+                {
+                    auto html = std::format(html_state_mismatch,
+                                            redirect_uri_host,
+                                            redirect_uri_port);
+                    resp.set_content(html, "text/html");
+                }
+                else
+                {
+                    auto html = std::format(html_all_good,
+                                            redirect_uri_host,
+                                            redirect_uri_port);
+
+                    resp.set_content(html, "text/html");
+                }
+            }
+            else if (req.has_param("error") and
+                     req.has_param("state"))
+            {
+                // the user doesn't accepted your request or an error has occurreded
+                auto html = std::format(html_user_approval_denied_or_error,
+                                        req.get_param_value("error"),
+                                        redirect_uri_host,
+                                        redirect_uri_port);
+
+                resp.set_content(html, "text/html");
+            }
+            else
+            {
+                // something bad happened
+                auto html = std::format(html_unknown_error,
+                                        redirect_uri_host,
+                                        redirect_uri_port);
+                resp.set_content(html, "text/html");
+            }
+        };
+
+        auto handle_stop = [&srv](const Request&, 
+                                  Response& resp)
         {
-            auth_code = req.get_param_value("code");
-        }
-
-        if (req.has_param("state"))
-        {
-            resp_state = req.get_param_value("state");
-        }
-
-        if (resp_state == state)
-        {
-            constexpr auto fmt = R"(
-                        <html>
-                        <title>Spotify</title>
-                        <body>
-                        <h1><a href="http://{}:{}/stop">Click here to continue</a></h1>
-                        </body>
-                        </html>
-                        )";
-
-            auto html = std::format(fmt,
-                                    redirect_uri_host,
-                                    redirect_uri_port);
-
-            resp.set_content(html, "text/html");
-        }
-        else
-        {
-            constexpr auto fmt = R"(
-                        <html>
-                        <title>Error</title>
-                        <body>
-                        <h1><a href="http://{}:{}/stop">Sadge</a></h1>
-                        </body>
-                        </html>
-                        )";
-            auto html = std::format(fmt,
-                                    redirect_uri_host,
-                                    redirect_uri_port);
-
-            resp.set_content(html, "text/html");
-        }
-        });
-
-        srv.Get("/stop",
-                [&srv](const httplib::Request&, httplib::Response&)
-        {
+            resp.set_content(html_stop, "text/html");
             srv.stop();
-        });
+        };
+
+        srv.Get(redirect_uri_path, handle_callback);
+        srv.Get("/stop", handle_stop);
 
         if (not srv.listen(redirect_uri_host, redirect_uri_port))
         {
-            return {};
+            throw std::runtime_error(
+                std::format("Cannot listen on {}:{}",
+                redirect_uri_host, redirect_uri_port)
+            );
         }
 
         return auth_code;
@@ -376,6 +387,61 @@ private:
     static constexpr auto redirect_uri_host = "localhost";
     static constexpr auto redirect_uri_port = 6969;
     static constexpr auto redirect_uri_path = "/spotify-callback";
+
+    static constexpr auto html_state_mismatch =
+        R"(
+<html>
+    <title>Spotify Auth Error</title>
+<body>
+    <h1>Error, parameter 'state' sent to the server and parameter 'state' received from callback does not match</h1>
+    <a href="http://{}:{}/stop">Click here to continue</a>
+</body>
+</html>
+)";
+
+    static constexpr auto html_user_approval_denied_or_error =
+        R"(
+<html>
+    <title>Spotify Auth Error</title>
+<body>
+    <h1>Sorry, user did not accept your request: {}</h1>
+    <a href="http://{}:{}/stop">Click here to continue</a>
+</body>
+</html>
+)";
+
+    static constexpr auto html_unknown_error =
+        R"(
+<html>
+    <title>Spotify Auth Error</title>
+<body>
+    <h1>Unknown error</h1>
+    <a href="http://{}:{}/stop">Click here to continue</a>
+</body>
+</html>
+)";
+
+    static constexpr auto html_all_good =
+        R"(
+<html>
+    <title>Spotify Auth Success</title>
+<body>
+    <h1>Everything went good!</h1>
+    <a href="http://{}:{}/stop">Click here to continue</a>
+</body>
+</html>
+)";
+
+    static constexpr auto html_stop =
+        R"(
+<html>
+    <title>Spotify Auth</title>
+<body>
+    <h1>You can close the browser now</h1>
+</body>
+</html>
+)";
+
 };
 
 
