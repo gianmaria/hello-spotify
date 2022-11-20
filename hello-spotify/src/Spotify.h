@@ -427,27 +427,27 @@ public:
         njson body;
     };
 
-    API(cstr_ref access_token) :
-        access_token(access_token) {}
+    API(cstr_ref access_token)
+        : access_token(access_token) {}
 
-    Result user_profile_get_current_user_profile()
+    Result user_profile_get_current_user_profile() const
     {
         return GET("/v1/me");
     }
 
-    Result playlists_get_current_user_playlists(size_t limit, size_t offset)
+    Result playlists_get_current_user_playlists(size_t limit, size_t offset) const
     {
         auto path = std::format("/v1/me/playlists?limit={}&offset={}",
                                 limit, offset);
         return GET(path);
     }
 
-    Result player_get_currently_playing_track()
+    Result player_get_currently_playing_track() const
     {
         return GET("/v1/me/player/currently-playing");
     }
 
-    Result player_skip_to_next(str_cref device_id = "")
+    Result player_skip_to_next(str_cref device_id = "") const
     {
         str path = "/v1/me/player/next";
 
@@ -460,27 +460,16 @@ public:
         return POST(path);
     }
 
-    static bool is_token_expired(cstr_ref access_token)
+    Result player_get_playback_state() const
     {
-        auto r = httplib::SSLClient(host);
+        return GET("/v1/me/player");
+    }
 
-        httplib::Headers headers
-        {
-            {"Content-Type", "application/json"},
-            {"Authorization", "Bearer " + access_token},
-        };
+    bool is_token_expired() const
+    {
+        auto res = user_profile_get_current_user_profile();
 
-        auto path = "/v1/me";
-        auto result = r.Get(path, headers);
-
-        if (not result)
-        {
-            auto msg = std::format("Cannot GET to {}{} - {}",
-                                   host, path, httplib::to_string(result.error()));
-            throw std::runtime_error(msg);
-        }
-
-        switch (result.value().status)
+        switch (res.status_code)
         {
             case 200:
             {
@@ -495,7 +484,7 @@ public:
             default:
             {
                 auto msg = std::format("Unknown status code for call to is_token_expired(): {}",
-                                       result.value().status);
+                                       res.status_code);
                 throw std::runtime_error(msg);
             } break;
         }
@@ -503,11 +492,12 @@ public:
     }
 
 private:
+
     string access_token;
 
     static auto constexpr host = "api.spotify.com";
 
-    Result GET(cstr_ref path)
+    Result GET(cstr_ref path) const
     {
         static auto r = httplib::SSLClient(host);
 
@@ -536,7 +526,7 @@ private:
         };
     }
 
-    Result POST(cstr_ref path)
+    Result POST(cstr_ref path) const
     {
         static auto r = httplib::SSLClient(host);
         static httplib::Headers headers
