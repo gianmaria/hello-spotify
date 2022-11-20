@@ -43,6 +43,57 @@ string env(string_view name)
     return res;
 }
 
+
+void general_test(Spotify::API& api)
+{
+    auto me = api.get_current_user_profile();
+
+    cout << "User: " << me.body["display_name"].get_ref<str_cref>()
+        << " mail: " << me.body["email"].get_ref<str_cref>()
+        << " id: " << me.body["id"].get_ref<str_cref>()
+        << " product: " << me.body["product"].get_ref<str_cref>()
+        << endl;
+
+    //cout << playlists.dump(3) << endl;
+    size_t offset = 0;
+    size_t limit = 50;
+
+    auto playlists = api.get_current_user_playlists(limit, offset);
+
+    cout << "Found " << playlists.body["total"].get<size_t>() << " playlists" << endl;
+
+    size_t count = 1;
+    while (true)
+    {
+        for (const auto& item : playlists.body["items"])
+        {
+            cout
+                << "[" << count++ << "] "
+                << item["name"]
+                << " by " << item["owner"]["display_name"]
+                << " - " << item["uri"]
+                << endl;
+        }
+
+        if (playlists.body["next"].is_null())
+            break;
+
+        offset += limit;
+
+        using namespace std::chrono_literals;
+        std::this_thread::sleep_for(500ms);
+
+        playlists = api.get_current_user_playlists(limit, offset);
+    }
+}
+
+void playback_test(Spotify::API& api)
+{
+    auto res = api.skip_to_next();
+
+    int stop = 0;
+}
+
 int main()
 {
     try
@@ -138,47 +189,9 @@ int main()
                 spotify_auth.dump(3) << std::endl;
         }
 
-        auto spotify = Spotify::API(spotify_auth["access_token"].get_ref<string&>());
+        auto api = Spotify::API(spotify_auth["access_token"].get_ref<string&>());
 
-        auto me = spotify.get_current_user_profile();
-
-        cout << "User: " << me["display_name"].get_ref<str_cref>()
-            << " mail: " << me["email"].get_ref<str_cref>()
-            << " id: " << me["id"].get_ref<str_cref>()
-            << " product: " << me["product"].get_ref<str_cref>()
-            << endl;
-
-        //cout << playlists.dump(3) << endl;
-        size_t offset = 0;
-        size_t limit = 50;
-        
-        auto playlists = spotify.get_current_user_playlists(limit, offset);
-
-        cout << "Found " << playlists["total"].get<size_t>() << " playlists" << endl;
-
-        size_t count = 1;
-        while (true)
-        {
-            for (const auto& item : playlists["items"])
-            {
-                cout
-                    << "[" << count++ << "] "
-                    << item["name"]
-                    << " by " << item["owner"]["display_name"]
-                    << " - " << item["uri"]
-                    << endl;
-            }
-
-            if (playlists["next"].is_null())
-                break;
-
-            offset += limit;
-
-            using namespace std::chrono_literals;
-            std::this_thread::sleep_for(500ms);
-
-            playlists = spotify.get_current_user_playlists(limit, offset);
-        }
+        playback_test(api);
 
         return 0;
     }
