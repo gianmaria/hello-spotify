@@ -142,19 +142,21 @@ int main()
 
         auto me = spotify.get_current_user_profile();
 
-        cout << "User " << me["display_name"].get_ref<str_cref>()
-            << " mail " << me["email"].get_ref<str_cref>()
-            << " id " << me["id"].get_ref<str_cref>()
-            << " product " << me["product"].get_ref<str_cref>()
+        cout << "User: " << me["display_name"].get_ref<str_cref>()
+            << " mail: " << me["email"].get_ref<str_cref>()
+            << " id: " << me["id"].get_ref<str_cref>()
+            << " product: " << me["product"].get_ref<str_cref>()
             << endl;
 
         //cout << playlists.dump(3) << endl;
         size_t offset = 0;
-        size_t count = 1;
-
         size_t limit = 50;
+        
         auto playlists = spotify.get_current_user_playlists(limit, offset);
+
         cout << "Found " << playlists["total"].get<size_t>() << " playlists" << endl;
+
+        size_t count = 1;
         while (true)
         {
             for (const auto& item : playlists["items"])
@@ -177,30 +179,6 @@ int main()
 
             playlists = spotify.get_current_user_playlists(limit, offset);
         }
-
-        //auto play = spotify.get_currently_playing_track();
-
-        //cout << play.dump(3) << endl;
-
-
-        //if (not play.is_null() and
-        //    play.find("error") == play.end())
-        //{
-        //    cout << "Currently playing song: "
-        //        << play["item"]["name"] << " by "
-        //        << play["item"]["artists"][0]["name"]
-        //        << " on " << play["/device/name"_json_pointer]
-        //        << endl;
-        //}
-        //else
-        //{
-        //    cout << "[ERR] "
-        //        << play["/error/status"_json_pointer]
-        //        << " " << play["/error/message"_json_pointer]
-        //        << endl;
-        //}
-
-        //cout << spotify.skip_to_next() << endl;
 
         return 0;
     }
