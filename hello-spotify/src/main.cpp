@@ -68,7 +68,16 @@ int main()
         }
         else
         {
-            auto auth = Spotify::Auth(env("CLIENT_ID"), env("CLIENT_SECRET"));
+            Spotify::Auth_Settings settings
+            {
+                .client_id = env("CLIENT_ID"),
+                .client_secret = env("CLIENT_SECRET"),
+                .redirect_uri_host = "localhost",
+                .redirect_uri_port = 6969,
+                .redirect_uri_path = "/spotify-callback"
+            };
+
+            auto auth = Spotify::Auth(settings);
 
             auto chrome_params = std::format("--new-window --profile-directory=\"Default\" {}",
                                              auth.generate_url_for_user_authorization());
