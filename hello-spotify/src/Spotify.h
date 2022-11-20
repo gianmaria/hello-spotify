@@ -251,7 +251,6 @@ public:
         return njson::parse(resp.body);
     }
 
-
     static bool is_token_expired(cstr_ref access_token)
     {
         auto r = httplib::SSLClient(host);
@@ -270,6 +269,80 @@ public:
         }
 
         return (result.value().status == 401);
+    }
+
+private:
+    Auth_Settings auth_settings;
+
+    string state;
+    string code_verifier;
+
+    static constexpr auto host = "accounts.spotify.com";
+
+    static constexpr auto html_state_mismatch =
+        R"(
+<html>
+    <title>Spotify Auth Error</title>
+<body>
+    <h1>Error, parameter 'state' sent to the server and parameter 'state' received from callback does not match</h1>
+    <a href="http://{}:{}/stop">Click here to continue</a>
+</body>
+</html>
+)";
+
+    static constexpr auto html_user_approval_denied_or_error =
+        R"(
+<html>
+    <title>Spotify Auth Error</title>
+<body>
+    <h1>Sorry, user did not accept your request: {}</h1>
+    <a href="http://{}:{}/stop">Click here to continue</a>
+</body>
+</html>
+)";
+
+    static constexpr auto html_unknown_error =
+        R"(
+<html>
+    <title>Spotify Auth Error</title>
+<body>
+    <h1>Unknown error</h1>
+    <a href="http://{}:{}/stop">Click here to continue</a>
+</body>
+</html>
+)";
+
+    static constexpr auto html_all_good =
+        R"(
+<html>
+    <title>Spotify Auth Success</title>
+<body>
+    <h1>Everything went good!</h1>
+    <a href="http://{}:{}/stop">Click here to continue</a>
+</body>
+</html>
+)";
+
+    static constexpr auto html_stop =
+        R"(
+<html>
+    <title>Spotify Auth</title>
+<body>
+    <h1>You can close the browser now</h1>
+</body>
+</html>
+)";
+
+    string get_redirect_uri()
+    {
+        std::stringstream ss;
+        ss << "http://"
+            << auth_settings.redirect_uri_host
+            << ":"
+            << auth_settings.redirect_uri_port
+            << auth_settings.redirect_uri_path;
+
+        return ss.str();
     }
 
     static int random_int(int min, int max)
@@ -372,82 +445,7 @@ public:
         return cppcodec::base64_url_unpadded::encode<string>(input);
     }
 
-
-private:
-    Auth_Settings auth_settings;
-
-    string state;
-    string code_verifier;
-
-    static constexpr auto host = "accounts.spotify.com";
-
-    static constexpr auto html_state_mismatch =
-        R"(
-<html>
-    <title>Spotify Auth Error</title>
-<body>
-    <h1>Error, parameter 'state' sent to the server and parameter 'state' received from callback does not match</h1>
-    <a href="http://{}:{}/stop">Click here to continue</a>
-</body>
-</html>
-)";
-
-    static constexpr auto html_user_approval_denied_or_error =
-        R"(
-<html>
-    <title>Spotify Auth Error</title>
-<body>
-    <h1>Sorry, user did not accept your request: {}</h1>
-    <a href="http://{}:{}/stop">Click here to continue</a>
-</body>
-</html>
-)";
-
-    static constexpr auto html_unknown_error =
-        R"(
-<html>
-    <title>Spotify Auth Error</title>
-<body>
-    <h1>Unknown error</h1>
-    <a href="http://{}:{}/stop">Click here to continue</a>
-</body>
-</html>
-)";
-
-    static constexpr auto html_all_good =
-        R"(
-<html>
-    <title>Spotify Auth Success</title>
-<body>
-    <h1>Everything went good!</h1>
-    <a href="http://{}:{}/stop">Click here to continue</a>
-</body>
-</html>
-)";
-
-    static constexpr auto html_stop =
-        R"(
-<html>
-    <title>Spotify Auth</title>
-<body>
-    <h1>You can close the browser now</h1>
-</body>
-</html>
-)";
-
-    string get_redirect_uri()
-    {
-        std::stringstream ss;
-        ss << "http://"
-            << auth_settings.redirect_uri_host
-            << ":"
-            << auth_settings.redirect_uri_port
-            << auth_settings.redirect_uri_path;
-
-        return ss.str();
-    }
 };
-
 
 class API
 {
