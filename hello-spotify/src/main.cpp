@@ -189,13 +189,14 @@ int main()
             };
 
             auto auth = Spotify::Auth(settings);
+            auto url_to_open = auth.generate_url_for_user_authorization();
 
-            auto chrome_params = std::format("--new-window --profile-directory=\"Default\" {}",
-                                             auth.generate_url_for_user_authorization());
-
-            auto res = ShellExecuteA(NULL, "open",
-                                     "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-                                     chrome_params.c_str(), NULL, 0);
+            auto res = ShellExecuteA(NULL, 
+                                     "open",
+                                     url_to_open.c_str(),
+                                     NULL, 
+                                     NULL, 
+                                     SW_SHOWNORMAL);
 
             if (reinterpret_cast<INT_PTR>(res) < 32)
             {
