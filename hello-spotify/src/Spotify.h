@@ -552,10 +552,10 @@ private:
 
         auto resp = result.value();
 
-        return Result{
+        return Result {
             .status_code = resp.status,
             .reason = resp.reason,
-            .body = (resp.body != "") ? njson::parse(resp.body) : njson::parse("{}")
+            .body = njson::accept(resp.body) ? njson::parse(resp.body) : njson::parse("{}")
         };
     }
 
