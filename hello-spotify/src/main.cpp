@@ -47,10 +47,11 @@ string env(string_view name)
 void general_test(const Spotify::API& api)
 {
     auto me = api.user_profile_get_current_user_profile();
+    auto id = me.body["id"].get_ref<str_cref>();
 
     cout << "User: " << me.body["display_name"].get_ref<str_cref>()
         << " mail: " << me.body["email"].get_ref<str_cref>()
-        << " id: " << me.body["id"].get_ref<str_cref>()
+        << " id: " << id
         << " product: " << me.body["product"].get_ref<str_cref>()
         << endl;
 
@@ -67,12 +68,21 @@ void general_test(const Spotify::API& api)
     {
         for (const auto& item : playlists.body["items"])
         {
+            auto playlist_owner = item["owner"]["id"].get_ref<str_cref>();
+
+            if (id != playlist_owner)
+            {
+                continue;
+            }
+
             cout
                 << "[" << count++ << "] "
                 << item["name"]
                 << " by " << item["owner"]["display_name"]
-                << " - " << item["uri"]
+                << " - " << item["tracks"]["total"].get<uint32_t>() << " songs"
                 << endl;
+
+
         }
 
         if (playlists.body["next"].is_null())
@@ -195,7 +205,8 @@ int main()
 
         auto api = Spotify::API(spotify_auth["access_token"].get_ref<string&>());
 
-        playback_test(api);
+        //playback_test(api);
+        general_test(api);
 
         return 0;
     }
